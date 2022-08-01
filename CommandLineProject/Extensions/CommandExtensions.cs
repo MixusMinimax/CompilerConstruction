@@ -1,6 +1,11 @@
-﻿using CommandLineProject.Commands;
+﻿using System.Drawing;
+using CommandLine;
+using CommandLine.Text;
+using CommandLineProject.Commands;
+using CommandLineProject.Exceptions;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
+using Pastel;
 
 namespace CommandLineProject.Extensions;
 
@@ -42,13 +47,49 @@ public static class CommandExtensions
         Stream? output = default)
     {
         var mapping = services.GetRequiredService<CommandMapping>();
-        foreach (var (_, definition) in mapping.Mapping.ToList())
+        foreach (var (old, definition) in mapping.Mapping.ToList())
         {
             var instance = (INonGenericCommand)services.GetRequiredService(definition.CommandType);
-            mapping.Mapping[instance.Name] = definition with { Name = instance.Name };
+            mapping.Mapping.Remove(old);
+            mapping.Mapping[instance.Name] = definition with { Name = instance.Name, HelpText = instance.HelpText };
         }
 
         var app = services.GetRequiredService<CommandLineApp>();
         await app.RunAsync(input ?? Console.OpenStandardInput(), output ?? Console.OpenStandardOutput());
+    }
+
+    public static CommandDefinition? GetCommandDefinition(this IServiceProvider serviceProvider, string name)
+    {
+        var mapping = serviceProvider.GetRequiredService<CommandMapping>().GetCommandType(name);
+        if (mapping is null) return null;
+        return mapping with
+        {
+            GetImplementation = () =>
+                serviceProvider.GetRequiredService(mapping.CommandType) as INonGenericCommand
+        };
+    }
+
+    public static async Task<int?> ExecuteCommandAsync(this IServiceProvider services, StreamWriter writer,
+        string commandName, IEnumerable<string> arguments)
+    {
+        var mapping = services.GetCommandDefinition(commandName);
+        var command = mapping?.GetImplementation?.Invoke();
+        if (mapping is null || command is null)
+        {
+            await writer.WriteLineAsync($"Command [{commandName}] not found".Pastel(Color.DarkRed));
+            return 404;
+        }
+
+        try
+        {
+            var options =
+                new Parser(settings => { settings.HelpWriter = writer; }).ParseArguments(mapping.OptionsType,
+                    arguments);
+            return await command.ExecuteObjectAsync(options, writer);
+        }
+        catch (ParserException)
+        {
+            return 111;
+        }
     }
 }

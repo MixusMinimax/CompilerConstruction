@@ -5,6 +5,7 @@ namespace CommandLineProject;
 public interface INonGenericCommand
 {
     public string Name { get; }
+    public string? HelpText { get; }
     public Task<int> ExecuteObjectAsync(object? options, StreamWriter writer);
 }
 
@@ -19,6 +20,7 @@ public abstract class ICommand<TOptions> : INonGenericCommand where TOptions : c
     public abstract Task<int> ExecuteAsync(TOptions options, StreamWriter outputWriter);
 
     public abstract string Name { get; }
+    public abstract string? HelpText { get; }
 
     public async Task<int> ExecuteObjectAsync(object? options, StreamWriter writer)
     {

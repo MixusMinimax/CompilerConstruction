@@ -9,20 +9,11 @@ namespace CommandLineProject;
 
 public class CommandLineApp
 {
-    private Func<string, CommandDefinition?> GetCommandMapping { get; }
+    private IServiceProvider ServiceProvider { get; }
 
     public CommandLineApp(IServiceProvider serviceProvider)
     {
-        GetCommandMapping = name =>
-        {
-            var mapping = serviceProvider.GetRequiredService<CommandMapping>().GetCommandType(name);
-            if (mapping is null) return null;
-            return mapping with
-            {
-                GetImplementation = () =>
-                    serviceProvider.GetRequiredService(mapping.CommandType) as INonGenericCommand
-            };
-        };
+        ServiceProvider = serviceProvider;
     }
 
     public async Task RunAsync(Stream input, Stream output)
@@ -40,29 +31,21 @@ public class CommandLineApp
             var tokens = line?.Split(' ').Where(s => !string.IsNullOrEmpty(s)).ToArray();
             if (tokens?.Length is 0 or null) continue;
             var commandName = tokens[0];
-            var mapping = GetCommandMapping(commandName);
-            var command = mapping?.GetImplementation?.Invoke();
-            if (mapping is null || command is null)
-            {
-                await writer.WriteLineAsync($"Command [{commandName}] not found".Pastel(Color.DarkRed));
-                continue;
-            }
 
             try
             {
-                var options = Parser.Default.ParseArguments(mapping.OptionsType, tokens[1..]);
+                var result = await ServiceProvider.ExecuteCommandAsync(writer, commandName, tokens[1..]);
+                if (result is not null)
+                {
+                    lastExitCode = (int)result;
+                }
+                else continue;
 
-
-                var result = lastExitCode = await command.ExecuteObjectAsync(options, writer);
                 if (result is not 0)
                 {
                     await writer.WriteLineAsync(
                         $"Command [{commandName}] failed with code {result}".Pastel(Color.DarkRed));
                 }
-            }
-            catch (ParserException)
-            {
-                lastExitCode = -1;
             }
             catch (ExitException)
             {

@@ -5,7 +5,7 @@ namespace CommandLineProject.Extensions;
 
 public static class ParserExtensions
 {
-    public static object ParseArguments(this Parser parser, Type optionsType, params string[] args)
+    public static object ParseArguments(this Parser parser, Type optionsType, IEnumerable<string> args)
     {
         var method =
             typeof(Parser).GetMethod(nameof(Parser.ParseArguments), new[] { typeof(IEnumerable<string>) });

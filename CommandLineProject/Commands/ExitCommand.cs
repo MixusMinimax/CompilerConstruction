@@ -9,6 +9,7 @@ public class ExitOptions
 public class ExitCommand : ICommand<ExitOptions>
 {
     public override string Name => "exit";
+    public override string HelpText => "Exits the application.";
 
     public override Task<int> ExecuteAsync(ExitOptions options, StreamWriter outputWriter)
     {
