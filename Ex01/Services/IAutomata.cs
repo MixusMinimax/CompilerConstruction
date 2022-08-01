@@ -9,7 +9,6 @@ public interface IAutomata
 
     public bool Accepts(IEnumerable<char> input) => Accepts(input, out _);
 
-
     public bool Accepts(IEnumerable<char> input, out INode finalNode)
     {
         try

@@ -80,16 +80,24 @@ public static class CommandExtensions
             return 404;
         }
 
+        var args = arguments as string[] ?? arguments.ToArray();
+        var isHelp = args.Contains("--help");
+
         try
         {
+            if (isHelp)
+            {
+                await writer.WriteLineAsync($"{commandName} : {command.HelpText}".Pastel(Color.DarkCyan));
+            }
+
             var options =
                 new Parser(settings => { settings.HelpWriter = writer; }).ParseArguments(mapping.OptionsType,
-                    arguments);
+                    args);
             return await command.ExecuteObjectAsync(options, writer);
         }
         catch (ParserException)
         {
-            return 111;
+            return isHelp ? 0 : 111;
         }
     }
 }

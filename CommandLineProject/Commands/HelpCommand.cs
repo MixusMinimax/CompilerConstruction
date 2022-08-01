@@ -6,7 +6,7 @@ namespace CommandLineProject.Commands;
 
 public class HelpOptions
 {
-    [Value(0, HelpText = "Command to provide help for")]
+    [Value(0, HelpText = "Command to provide help for", MetaName = nameof(Command))]
     public string? Command { get; set; } = default;
 }
 
