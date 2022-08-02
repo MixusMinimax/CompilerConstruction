@@ -1,6 +1,4 @@
-﻿using System.Collections;
-
-namespace Ex02.Models;
+﻿namespace Common.Models;
 
 public record Epsilon : RegexTree
 {
@@ -8,12 +6,9 @@ public record Epsilon : RegexTree
 
     public override ISet<Letter> First { get; } = new HashSet<Letter>();
 
-    private ISet<Letter>? _next;
-
     public override ISet<Letter> Next
     {
-        get => _next ?? (Next = new HashSet<Letter>());
-        set => _next = value;
+        set => NextBackingField = value;
     }
 
     public override ISet<Letter> Last { get; } = new HashSet<Letter>();

@@ -1,19 +1,16 @@
-﻿namespace Ex02.Models;
+﻿namespace Common.Models;
 
 public record Star(RegexTree SubExpression) : RegexTree
 {
     public override bool Empty => true;
 
     public override ISet<Letter> First { get; } = SubExpression.First;
-
-    private ISet<Letter>? _next;
-
+    
     public override ISet<Letter> Next
     {
-        get => _next ?? (Next = new HashSet<Letter>());
         set
         {
-            _next = value;
+            NextBackingField = value;
             SubExpression.Next = SubExpression.First.Union(value).ToHashSet();
         }
     }

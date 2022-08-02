@@ -1,4 +1,4 @@
-﻿namespace Ex02.Models;
+﻿namespace Common.Models;
 
 public record Letter(char Character) : RegexTree
 {
@@ -7,13 +7,12 @@ public record Letter(char Character) : RegexTree
     private ISet<Letter>? _first;
     public override ISet<Letter> First => _first ??= new HashSet<Letter>(new[] { this });
 
-    private ISet<Letter>? _next;
-
     public override ISet<Letter> Next
     {
-        get => _next ?? (Next = new HashSet<Letter>());
-        set => _next = value;
+        set => NextBackingField = value;
     }
+    
+    
 
     private ISet<Letter>? _last;
     public override ISet<Letter> Last => _last ??= new HashSet<Letter>(new[] { this });

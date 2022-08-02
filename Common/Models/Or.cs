@@ -1,4 +1,4 @@
-﻿namespace Ex02.Models;
+﻿namespace Common.Models;
 
 public record Or(RegexTree Left, RegexTree Right) : RegexTree
 {
@@ -6,19 +6,15 @@ public record Or(RegexTree Left, RegexTree Right) : RegexTree
 
     public override ISet<Letter> First { get; } = Left.First.Union(Right.First).ToHashSet();
 
-    private ISet<Letter>? _next;
-
     public override ISet<Letter> Next
     {
-        get => _next ?? (Next = new HashSet<Letter>());
         set
         {
-            _next = value;
+            NextBackingField = value;
             Left.Next = value;
             Right.Next = value;
         }
     }
-
 
     public override ISet<Letter> Last { get; } = Left.Last.Union(Right.Last).ToHashSet();
 

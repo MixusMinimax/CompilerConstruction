@@ -1,4 +1,4 @@
-﻿namespace Ex02.Models;
+﻿namespace Common.Models;
 
 public record Concat(RegexTree Left, RegexTree Right) : RegexTree
 {
@@ -6,14 +6,11 @@ public record Concat(RegexTree Left, RegexTree Right) : RegexTree
 
     public override ISet<Letter> First { get; } = Left.Empty ? Left.First.Union(Right.First).ToHashSet() : Left.First;
 
-    private ISet<Letter>? _next;
-
     public override ISet<Letter> Next
     {
-        get => _next ?? (Next = new HashSet<Letter>());
         set
         {
-            _next = value;
+            NextBackingField = value;
             Left.Next = Right.Empty ? Right.First.Union(value).ToHashSet() : Right.First.ToHashSet();
             Right.Next = value;
         }

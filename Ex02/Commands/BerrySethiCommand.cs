@@ -14,9 +14,9 @@ public class BerrySethiOptions
 
 public class BerrySethiCommand : ICommand<BerrySethiOptions>
 {
-    private readonly IBerriSethiService _berrySethiService;
+    private readonly IBerrySethiService _berrySethiService;
 
-    public BerrySethiCommand(IBerriSethiService berrySethiService)
+    public BerrySethiCommand(IBerrySethiService berrySethiService)
     {
         _berrySethiService = berrySethiService;
     }
