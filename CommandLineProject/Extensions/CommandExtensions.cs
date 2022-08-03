@@ -1,4 +1,5 @@
 ﻿using System.Drawing;
+using System.Text;
 using CommandLine;
 using CommandLine.Text;
 using CommandLineProject.Commands;

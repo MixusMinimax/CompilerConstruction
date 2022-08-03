@@ -1,5 +1,6 @@
 ﻿using Common.Models;
 using Ex02.Models;
+using Ex02.Repositories;
 using Epsilon = Ex02.Models.Epsilon;
 
 namespace Ex02.Services;
@@ -14,76 +15,83 @@ public class RegexParserService : IRegexParserService
     private readonly IBerrySethiService _berrySethiService;
 
     private readonly Grammar _grammar;
+    private PushDownTable? _table;
 
-    public RegexParserService(IBerrySethiService berrySethiService)
+    public RegexParserService(IBerrySethiService berrySethiService, IGrammarRepository grammarRepository)
     {
         _berrySethiService = berrySethiService;
-        var nonTerminals = new Dictionary<string, NonTerminal>
+
+        _grammar = grammarRepository.GetExerciseGrammar();
+    }
+
+    private async Task<PushDownTable> CreatePushDownTable()
+    {
+        var stateFrontier = new Stack<State>(new[]
         {
-            ["S'"] = new NonTerminal("S'"),
-            ["regex"] = new NonTerminal("regex"),
-            ["A1"] = new NonTerminal("A1"),
-            ["concat"] = new NonTerminal("concat"),
-            ["A2"] = new NonTerminal("A2"),
-            ["rep"] = new NonTerminal("rep"),
-            ["A3"] = new NonTerminal("A3"),
-            ["atom"] = new NonTerminal("atom")
-        };
-        var terminals = new Dictionary<string, Terminal>
+            new State(_grammar.StartSymbol,
+                _grammar.Productions[_grammar.StartSymbol.Name].RightHands[0], 0)
+        });
+        var rules = new List<PushDownRule>();
+        while (stateFrontier.Count > 0)
         {
-            ["$"] = new Terminal("$"),
-            ["letter"] = new Terminal("letter"),
-            ["|"] = new Terminal("|", true),
-            ["*"] = new Terminal("*", true),
-            ["("] = new Terminal("(", true),
-            [")"] = new Terminal(")", true),
-            ["e"] = new Epsilon()
-        };
-        var productions = new[]
-        {
-            new Production(nonTerminals["S'"], new[]
+            var state = stateFrontier.Pop();
+            if (state.IsBeforeEndOfInput) continue;
+            var ruleType = state.IsBeforeNonTerminal
+                ? PushDownRuleType.Expand
+                : PushDownRuleType.Shift;
+
+            // If expand, immediately also add the corresponding reduce rule.
+            // After shift or reduce, do not put states onto the stack where the bullet is at the end.
+
+            if (ruleType is PushDownRuleType.Expand)
             {
-                new Symbol[] { nonTerminals["regex"], terminals["$"] }
-            }),
-            new Production(nonTerminals["regex"], new[]
+                if (rules.Any(rule => rule.Head.SequenceEqual(new[] { state }))) continue;
+                var nonTerminal = (NonTerminal)state.RightHandSide.Symbols[state.BulletPosition];
+                var production = _grammar.Productions[nonTerminal.Name];
+                var expansions = production.RightHands
+                    .Select(rightHand => new State(nonTerminal, rightHand, 0))
+                    .ToList();
+                foreach (var expansion in expansions)
+                {
+                    var progressedState = state with { BulletPosition = state.BulletPosition + 1 };
+                    rules.Add(new PushDownRule(PushDownRuleType.Expand, new[] { state }, new Epsilon(), new[]
+                    {
+                        state, expansion
+                    }));
+                    rules.Add(new PushDownRule(PushDownRuleType.Reduce, new[]
+                    {
+                        state, expansion with { BulletPosition = expansion.RightHandSide.Length }
+                    }, new Epsilon(), new[]
+                    {
+                        progressedState
+                    }));
+                    if (!expansion.IsAtEnd) stateFrontier.Push(expansion);
+                    if (!progressedState.IsAtEnd) stateFrontier.Push(progressedState);
+                }
+            }
+            else
             {
-                new Symbol[] { nonTerminals["concat"], nonTerminals["A1"] }
-            }),
-            new Production(nonTerminals["A1"], new[]
-            {
-                new Symbol[] { terminals["|"], nonTerminals["regex"] },
-                new Symbol[] { terminals["e"] }
-            }),
-            new Production(nonTerminals["concat"], new[]
-            {
-                new Symbol[] { nonTerminals["rep"], nonTerminals["A2"] }
-            }),
-            new Production(nonTerminals["A2"], new[]
-            {
-                new Symbol[] { nonTerminals["concat"] },
-                new Symbol[] { terminals["e"] }
-            }),
-            new Production(nonTerminals["rep"], new[]
-            {
-                new Symbol[] { nonTerminals["atom"], nonTerminals["A3"] }
-            }),
-            new Production(nonTerminals["A3"], new[]
-            {
-                new Symbol[] { terminals["*"] },
-                new Symbol[] { terminals["e"] }
-            }),
-            new Production(nonTerminals["atom"], new[]
-            {
-                new Symbol[] { terminals["("], nonTerminals["regex"], terminals[")"] },
-                new Symbol[] { terminals["letter"] }
-            })
-        };
-        _grammar = new Grammar(nonTerminals.Values, terminals.Values, productions);
+                if (rules.Any(rule => rule.Head.SequenceEqual(new[] { state }))) continue;
+                var terminal = (Terminal)state.RightHandSide.Symbols[state.BulletPosition];
+                var progressedState = state with { BulletPosition = state.BulletPosition + 1 };
+                rules.Add(
+                    new PushDownRule(PushDownRuleType.Shift, new[] { state }, terminal, new[] { progressedState }));
+                if (!progressedState.IsAtEnd) stateFrontier.Push(progressedState);
+            }
+        }
+
+        return new PushDownTable(rules.ToArray());
+    }
+
+    public async Task<PushDownTable> GetPushDownTable()
+    {
+        return _table ??= await CreatePushDownTable();
     }
 
     public async Task<RegexTree> ParseRegex(string regexString, StreamWriter writer)
     {
         await writer.WriteLineAsync(_grammar.ToString());
+        await writer.WriteLineAsync((await GetPushDownTable()).ToString());
         return _berrySethiService.ConstructExample();
     }
 }
