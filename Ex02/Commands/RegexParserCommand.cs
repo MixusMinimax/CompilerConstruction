@@ -58,7 +58,7 @@ public class RegexParserCommand : ICommand<
 
     public override async Task<int> ExecuteAsync(RegexParserSaveOptions options, StreamWriter outputWriter)
     {
-        var regexTree = _regexParser.ParseRegex(options.RegexString);
+        var regexTree = await _regexParser.ParseRegex(options.RegexString, outputWriter);
         await _regexRepository.SaveAsync(options.Name, regexTree);
         await outputWriter.WriteLineAsync($"Regex [{options.Name}] saved: " +
                                           $"/{regexTree.RegexString}/".Pastel(Color.DarkCyan));
