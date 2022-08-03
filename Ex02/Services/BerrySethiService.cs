@@ -76,8 +76,10 @@ public class BerrySethiService : IBerrySethiService
         var stateCount = letters.Count;
 
         var transitions = previousTransitions is not null
-            ? new Dictionary<BitArray, IDictionary<char, BitArray>>(previousTransitions, new CollectionExtensions.BitArrayEqualityComparer())
-            : new Dictionary<BitArray, IDictionary<char, BitArray>>(new CollectionExtensions.BitArrayEqualityComparer());
+            ? new Dictionary<BitArray, IDictionary<char, BitArray>>(previousTransitions,
+                new CollectionExtensions.BitArrayEqualityComparer())
+            : new Dictionary<BitArray, IDictionary<char, BitArray>>(
+                new CollectionExtensions.BitArrayEqualityComparer());
 
         BitArray GetNext(BitArray currentState, char character)
         {
@@ -105,8 +107,6 @@ public class BerrySethiService : IBerrySethiService
         if (regexTree.Empty) finalStates[0] = true;
         bool IsFinalState(BitArray s) => new BitArray(finalStates).And(s).Cast<bool>().Any(e => e);
 
-        
-        
         var allStates = transitions.Keys.Concat(transitions.Values.SelectMany(e => e.Values))
             .Distinct(new CollectionExtensions.BitArrayEqualityComparer()).ToList();
 

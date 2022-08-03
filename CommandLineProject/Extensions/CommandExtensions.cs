@@ -18,13 +18,22 @@ public static class CommandExtensions
             from type in marker.Assembly.ExportedTypes
             where !type.IsInterface && !type.IsAbstract
             where (type.BaseType?.IsGenericType ?? false) &&
-                  type.BaseType?.GetGenericTypeDefinition() == typeof(ICommand<>)
+                  (type.BaseType!.GetGenericTypeDefinition() == typeof(ICommand<>) ||
+                   type.BaseType!.GetGenericTypeDefinition() == typeof(ICommand<,>) ||
+                   type.BaseType!.GetGenericTypeDefinition() == typeof(ICommand<,,>) ||
+                   type.BaseType!.GetGenericTypeDefinition() == typeof(ICommand<,,,>) ||
+                   type.BaseType!.GetGenericTypeDefinition() == typeof(ICommand<,,,,>))
             select new CommandDefinition(
                 type.Name,
                 type,
                 type
                     .BaseType!
-                    .GetGenericArguments()[0]
+                    .GetGenericArguments()[0],
+                VerbTypes: type.BaseType!.GetGenericArguments().Length == 1
+                    ? null
+                    : type
+                        .BaseType!
+                        .GetGenericArguments()[1..]
             )
         ).ToDictionary(e => e.Name);
 
@@ -49,7 +58,7 @@ public static class CommandExtensions
         var mapping = services.GetRequiredService<CommandMapping>();
         foreach (var (old, definition) in mapping.Mapping.ToList())
         {
-            var instance = (INonGenericCommand)services.GetRequiredService(definition.CommandType);
+            var instance = (NonGenericCommand)services.GetRequiredService(definition.CommandType);
             mapping.Mapping.Remove(old);
             mapping.Mapping[instance.Name] = definition with { Name = instance.Name, HelpText = instance.HelpText };
         }
@@ -65,7 +74,7 @@ public static class CommandExtensions
         return mapping with
         {
             GetImplementation = () =>
-                serviceProvider.GetRequiredService(mapping.CommandType) as INonGenericCommand
+                serviceProvider.GetRequiredService(mapping.CommandType) as NonGenericCommand
         };
     }
 
@@ -90,9 +99,11 @@ public static class CommandExtensions
                 await writer.WriteLineAsync($"{commandName} : {command.HelpText}".Pastel(Color.DarkCyan));
             }
 
-            var options =
-                new Parser(settings => { settings.HelpWriter = writer; }).ParseArguments(mapping.OptionsType,
-                    args);
+            var parser = new Parser(settings => { settings.HelpWriter = writer; });
+            var options = (mapping.VerbTypes is not null
+                    ? parser.ParseArguments(args, mapping.VerbTypes)
+                    : parser.ParseArguments(mapping.OptionsType, args))
+                .WithNotParsed(_ => throw new ParserException()).Value;
             return await command.ExecuteObjectAsync(options, writer);
         }
         catch (ParserException)

@@ -2,7 +2,7 @@
 
 namespace CommandLineProject;
 
-public record CommandDefinition(string Name, Type CommandType, Type OptionsType, string? HelpText = default)
+public record CommandDefinition(string Name, Type CommandType, Type OptionsType, Type[]? VerbTypes = default, string? HelpText = default)
 {
-    public Func<INonGenericCommand?>? GetImplementation { get; init; } = default;
+    public Func<NonGenericCommand?>? GetImplementation { get; init; }
 }
