@@ -1,7 +1,10 @@
-﻿using CommandLine;
+﻿using System.Drawing;
+using CommandLine;
 using CommandLineProject;
+using Common.Models;
 using Ex02.Repositories;
 using Ex02.Services;
+using Pastel;
 
 namespace Ex02.Commands;
 
@@ -49,27 +52,49 @@ public class RegexParserCommand : ICommand<
         _regexRepository = regexRepository;
         _regexParser = regexParser;
     }
-    
+
     public override string Name => "regex";
     public override string HelpText => "Parse and save, retrieve, or delete regexes";
-    
-    public override Task<int> ExecuteAsync(RegexParserSaveOptions options, StreamWriter outputWriter)
+
+    public override async Task<int> ExecuteAsync(RegexParserSaveOptions options, StreamWriter outputWriter)
     {
-        throw new NotImplementedException();
+        var regexTree = _regexParser.ParseRegex(options.RegexString);
+        await _regexRepository.SaveAsync(options.Name, regexTree);
+        await outputWriter.WriteLineAsync($"Regex [{options.Name}] saved: " +
+                                          $"/{regexTree.RegexString}/".Pastel(Color.DarkCyan));
+        return 0;
     }
 
-    public override Task<int> ExecuteAsync(RegexParserGetOptions options, StreamWriter outputWriter)
+    public override async Task<int> ExecuteAsync(RegexParserGetOptions options, StreamWriter outputWriter)
     {
-        throw new NotImplementedException();
+        var regexTree = await _regexRepository.GetAsync(options.Name);
+        if (regexTree is null)
+        {
+            return 404;
+        }
+
+        await outputWriter.WriteLineAsync($"Regex [{options.Name}] is: " +
+                                          $"/{regexTree.RegexString}/".Pastel(Color.DarkCyan));
+        return 0;
     }
 
-    public override Task<int> ExecuteAsync(RegexParserListOptions options, StreamWriter outputWriter)
+    public override async Task<int> ExecuteAsync(RegexParserListOptions options, StreamWriter outputWriter)
     {
-        throw new NotImplementedException();
+        var regexes = await _regexRepository.GetAllAsync();
+        foreach (var (name, regexTree) in regexes)
+        {
+            await outputWriter.WriteLineAsync($"{$"[{name}]:",16} " +
+                                              $"/{regexTree.RegexString}/".Pastel(Color.DarkCyan));
+        }
+
+        return 0;
     }
 
-    public override Task<int> ExecuteAsync(RegexParserDeleteOptions options, StreamWriter outputWriter)
+    public override async Task<int> ExecuteAsync(RegexParserDeleteOptions options, StreamWriter outputWriter)
     {
-        throw new NotImplementedException();
+        var deleted = await _regexRepository.DeleteAsync(options.Name);
+        await outputWriter.WriteLineAsync(
+            $"Regex [{options.Name}] was {(deleted ? "deleted".Pastel(Color.ForestGreen) : "not found".Pastel(Color.DarkRed))}.");
+        return deleted ? 0 : 404;
     }
 }

@@ -4,36 +4,37 @@ namespace Ex02.Repositories;
 
 public interface IRegexTreeRepository
 {
-    public void SaveRegexTree(string name, RegexTree regexTree);
+    public Task SaveAsync(string name, RegexTree regexTree);
+    
+    public Task<RegexTree?> GetAsync(string name);
 
-    public RegexTree? GetRegexTree(string name);
+    public Task<IEnumerable<(string Name, RegexTree RegexTree)>> GetAllAsync();
 
-    public IEnumerable<(string Name, RegexTree RegexTree)> GetAllRegexTrees();
-
-    public bool DeleteRegexTree(string name);
+    public Task<bool> DeleteAsync(string name);
 }
 
 public class RegexTreeRepository : IRegexTreeRepository
 {
     private readonly Dictionary<string, RegexTree> _regexTrees = new();
 
-    public void SaveRegexTree(string name, RegexTree regexTree)
+    public Task SaveAsync(string name, RegexTree regexTree)
     {
         _regexTrees[name] = regexTree;
+        return Task.CompletedTask;
     }
 
-    public RegexTree? GetRegexTree(string name)
+    public Task<RegexTree?> GetAsync(string name)
     {
-        return _regexTrees.TryGetValue(name, out var regexTree) ? regexTree : null;
+        return Task.FromResult(_regexTrees.TryGetValue(name, out var regexTree) ? regexTree : null);
     }
 
-    public IEnumerable<(string Name, RegexTree RegexTree)> GetAllRegexTrees()
+    public Task<IEnumerable<(string Name, RegexTree RegexTree)>> GetAllAsync()
     {
-        return _regexTrees.Select(kvp => (kvp.Key, kvp.Value));
+        return Task.FromResult(_regexTrees.Select(kvp => (kvp.Key, kvp.Value)));
     }
 
-    public bool DeleteRegexTree(string name)
+    public Task<bool> DeleteAsync(string name)
     {
-        return _regexTrees.Remove(name);
+        return Task.FromResult(_regexTrees.Remove(name));
     }
 }

@@ -9,8 +9,15 @@ public interface IRegexParserService
 
 public class RegexParserService : IRegexParserService
 {
+    private readonly IBerrySethiService _berrySethiService;
+
+    public RegexParserService(IBerrySethiService berrySethiService)
+    {
+        _berrySethiService = berrySethiService;
+    }
+
     public RegexTree ParseRegex(string regexString)
     {
-        throw new NotImplementedException();
+        return _berrySethiService.ConstructExample();
     }
 }
