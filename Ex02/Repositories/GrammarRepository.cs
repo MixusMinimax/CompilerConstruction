@@ -33,7 +33,7 @@ public class GrammarRepository : IGrammarRepository
             ["*"] = new("*", true),
             ["("] = new("(", true),
             [")"] = new(")", true),
-            ["e"] = new Epsilon(),
+            ["e"] = Epsilon.Instance
         };
         var productions = new Dictionary<string, Production>
         {
@@ -95,7 +95,7 @@ public class GrammarRepository : IGrammarRepository
             ["$"] = new EndOfInput(),
             ["s"] = new("s"),
             ["a"] = new("a"),
-            ["e"] = new Epsilon(),
+            ["e"] = Epsilon.Instance
         };
         var productions = new Dictionary<string, Production>
         {

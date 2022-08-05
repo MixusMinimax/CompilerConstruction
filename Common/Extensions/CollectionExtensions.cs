@@ -38,4 +38,42 @@ public static class CollectionExtensions
         if (self is null || other is null) return false;
         return self.Keys.Count == other.Keys.Count && self.All(kv => Equals(other[kv.Key], kv.Value));
     }
+
+    public static IEnumerable<T> TakeWhileIncluding<T>(this IEnumerable<T> list, Func<T, bool> predicate)
+    {
+        foreach (var el in list)
+        {
+            yield return el;
+            if (!predicate(el))
+                yield break;
+        }
+    }
+
+    public static IEnumerable<TReturn> SelectWhere<T, TReturn>(this IEnumerable<T> list,
+        Func<T, TReturn?> selector)
+        where TReturn : struct
+    {
+        return list.Select(selector).Where(result => result is not null).Select(result => result!.Value);
+    }
+
+    public static IEnumerable<TReturn> SelectWhere<T, TReturn>(this IEnumerable<T> list,
+        Func<T, TReturn?> selector)
+        where TReturn : class
+    {
+        return list.Select(selector).Where(result => result is not null).Select(result => result!);
+    }
+
+    public static bool Contains<T>(this IEnumerable<T> enumerable, T value, out int index)
+    {
+        index = 0;
+
+        foreach (var el in enumerable)
+        {
+            if (Equals(el, value))
+                return true;
+            index++;
+        }
+
+        return false;
+    }
 }

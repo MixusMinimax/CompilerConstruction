@@ -2,11 +2,10 @@
 using System.Drawing;
 using CommandLine;
 using CommandLineProject;
+using Ex01.Services;
 using Pastel;
 
 namespace Ex01.Commands;
-
-using Ex01.Services;
 
 public class AutomataOptions
 {

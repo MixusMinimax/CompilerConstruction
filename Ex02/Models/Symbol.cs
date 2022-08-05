@@ -21,5 +21,7 @@ public record EndOfInput() : Terminal("$")
 
 public record Epsilon() : Terminal("()")
 {
+    public static readonly Epsilon Instance = new Epsilon();
+
     public override string ToString() => base.ToString();
 }

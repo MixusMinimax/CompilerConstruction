@@ -1,6 +1,5 @@
 ﻿using System.Reflection;
 using CommandLine;
-using CommandLineProject.Exceptions;
 using TypeInfo = CommandLine.TypeInfo;
 
 namespace CommandLineProject.Extensions;

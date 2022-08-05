@@ -1,8 +1,6 @@
 ﻿using System.Drawing;
-using CommandLine;
 using CommandLineProject.Exceptions;
 using CommandLineProject.Extensions;
-using Microsoft.Extensions.DependencyInjection;
 using Pastel;
 
 namespace CommandLineProject;

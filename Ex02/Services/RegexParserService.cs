@@ -59,14 +59,14 @@ public class RegexParserService : IRegexParserService
                 foreach (var expansion in expansions)
                 {
                     var progressedState = state with { BulletPosition = state.BulletPosition + 1 };
-                    rules.Add(new PushDownRule(PushDownRuleType.Expand, new[] { state }, new Epsilon(), new[]
+                    rules.Add(new PushDownRule(PushDownRuleType.Expand, new[] { state }, Epsilon.Instance, new[]
                     {
                         state, expansion
                     }));
                     rules.Add(new PushDownRule(PushDownRuleType.Reduce, new[]
                     {
                         state, expansion with { BulletPosition = expansion.RightHandSide.Length }
-                    }, new Epsilon(), new[]
+                    }, Epsilon.Instance, new[]
                     {
                         progressedState
                     }));
@@ -88,7 +88,7 @@ public class RegexParserService : IRegexParserService
         return Task.FromResult(new PushDownTable(rules.ToArray()));
     }
 
-    public async Task<PushDownTable> GetPushDownTable()
+    private async Task<PushDownTable> GetPushDownTable()
     {
         return _table ??= await CreatePushDownTable();
     }

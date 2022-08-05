@@ -1,7 +1,5 @@
 ﻿using System.Drawing;
-using System.Text;
 using CommandLine;
-using CommandLine.Text;
 using CommandLineProject.Commands;
 using CommandLineProject.Exceptions;
 using Microsoft.Extensions.DependencyInjection;

@@ -1,6 +1,4 @@
-﻿using CommandLine;
-
-namespace CommandLineProject.Exceptions;
+﻿namespace CommandLineProject.Exceptions;
 
 public class ParserException : Exception
 {

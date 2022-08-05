@@ -1,7 +1,6 @@
 ﻿using System.Drawing;
 using CommandLine;
 using CommandLineProject;
-using Common.Models;
 using Ex02.Repositories;
 using Ex02.Services;
 using Pastel;
