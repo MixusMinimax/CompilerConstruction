@@ -161,7 +161,14 @@ public class GrammarService : IGrammarService
         // and combine the FFollow of the left hand sides.
         // TODO
 
-        throw new NotImplementedException();
+        var fromParents = relevantProductions
+            .Where(production => production.RightHandSide.Symbols
+                .Skip(production.Index + 1)
+                .All(sym => (bool)GetIsEmpty(sym, metadata)!))
+            .Select(production => ComputeFFollow(production.From, metadata, grammar, usedSymbols))
+            .Aggregate(ImmutableHashSet<Terminal>.Empty, (set, fFollow) => set.Union(fFollow));
+
+        return SetFFollow(symbol, metadata, fromFollowing.Union(fromParents));
     }
 
     // Metadata modifications
