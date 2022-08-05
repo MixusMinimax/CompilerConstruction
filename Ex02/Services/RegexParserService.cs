@@ -24,7 +24,7 @@ public class RegexParserService : IRegexParserService
         _grammar = grammarRepository.GetExerciseGrammar();
     }
 
-    private async Task<PushDownTable> CreatePushDownTable()
+    private Task<PushDownTable> CreatePushDownTable()
     {
         var stateFrontier = new Stack<State>(new[]
         {
@@ -80,7 +80,7 @@ public class RegexParserService : IRegexParserService
             }
         }
 
-        return new PushDownTable(rules.ToArray());
+        return Task.FromResult(new PushDownTable(rules.ToArray()));
     }
 
     public async Task<PushDownTable> GetPushDownTable()

@@ -24,9 +24,18 @@ public static class CollectionExtensions
 
     public class BitArrayEqualityComparer : IEqualityComparer<BitArray>
     {
-        bool IEqualityComparer<BitArray>.Equals(BitArray? x, BitArray? y) => y != null && x != null && x.ElementsEqual(y);
+        bool IEqualityComparer<BitArray>.Equals(BitArray? x, BitArray? y) =>
+            y != null && x != null && x.ElementsEqual(y);
 
         int IEqualityComparer<BitArray>.GetHashCode(BitArray obj) =>
             obj.GetIndices().Aggregate(0L, (acc, e) => acc | (uint)(1 << e)).GetHashCode();
+    }
+
+    public static bool EntriesEqual<TKey, TValue>(this IDictionary<TKey, TValue>? self,
+        IDictionary<TKey, TValue>? other)
+    {
+        if (ReferenceEquals(self, other)) return true;
+        if (self is null || other is null) return false;
+        return self.Keys.Count == other.Keys.Count && self.All(kv => Equals(other[kv.Key], kv.Value));
     }
 }

@@ -6,6 +6,7 @@ using Microsoft.Extensions.DependencyInjection;
 await new ServiceCollection()
     .AddSingleton<IBerrySethiService, BerrySethiService>()
     .AddSingleton<IRegexParserService, RegexParserService>()
+    .AddSingleton<IGrammarService, GrammarService>()
     .AddSingleton<IRegexTreeRepository, RegexTreeRepository>()
     .AddSingleton<IGrammarRepository, GrammarRepository>()
     .RegisterCommands(typeof(Program))

@@ -1,4 +1,5 @@
-﻿using Ex02.Models;
+﻿using System.Collections.ObjectModel;
+using Ex02.Models;
 
 namespace Ex02.Repositories;
 
@@ -73,7 +74,12 @@ public class GrammarRepository : IGrammarRepository
                 new RightHandSide(terminals["letter"])
             })
         };
-        return new Grammar(nonTerminals, terminals, productions, nonTerminals["S'"]);
+        return new Grammar(
+            new ReadOnlyDictionary<string, NonTerminal>(nonTerminals),
+            new ReadOnlyDictionary<string, Terminal>(terminals),
+            new ReadOnlyDictionary<string, Production>(productions),
+            nonTerminals["S'"]
+        );
     }
 
     public Grammar GetExerciseGrammar()
@@ -107,6 +113,11 @@ public class GrammarRepository : IGrammarRepository
                 new RightHandSide(terminals["e"])
             })
         };
-        return new Grammar(nonTerminals, terminals, productions, nonTerminals["S'"]);
+        return new Grammar(
+            new ReadOnlyDictionary<string, NonTerminal>(nonTerminals),
+            new ReadOnlyDictionary<string, Terminal>(terminals),
+            new ReadOnlyDictionary<string, Production>(productions),
+            nonTerminals["S'"]
+        );
     }
 }
