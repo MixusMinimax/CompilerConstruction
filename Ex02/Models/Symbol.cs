@@ -6,7 +6,7 @@ public abstract record Symbol;
 
 public record NonTerminal(string Name) : Symbol
 {
-    public override string ToString() => Regex.IsMatch(Name, "[A-Z]+('|_?\\d+)") ? Name : $"<{Name}>";
+    public override string ToString() => Regex.IsMatch(Name, @"[A-Z]*('|_?\d+)?") ? Name : $"<{Name}>";
 }
 
 public record Terminal(string Name, bool Quoted = false) : Symbol

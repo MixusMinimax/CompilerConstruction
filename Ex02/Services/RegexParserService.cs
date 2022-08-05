@@ -13,13 +13,18 @@ public interface IRegexParserService
 public class RegexParserService : IRegexParserService
 {
     private readonly IBerrySethiService _berrySethiService;
+    private readonly IGrammarService _grammarService;
 
     private readonly Grammar _grammar;
     private PushDownTable? _table;
 
-    public RegexParserService(IBerrySethiService berrySethiService, IGrammarRepository grammarRepository)
+    public RegexParserService(
+        IBerrySethiService berrySethiService,
+        IGrammarRepository grammarRepository,
+        IGrammarService grammarService)
     {
         _berrySethiService = berrySethiService;
+        _grammarService = grammarService;
 
         _grammar = grammarRepository.GetExerciseGrammar();
     }
@@ -91,7 +96,14 @@ public class RegexParserService : IRegexParserService
     public async Task<RegexTree> ParseRegex(string regexString, StreamWriter writer)
     {
         await writer.WriteLineAsync(_grammar.ToString());
-        await writer.WriteLineAsync((await GetPushDownTable()).ToString());
+        var pushDownTable = await GetPushDownTable();
+        await writer.WriteLineAsync(pushDownTable.ToString());
+        var metadata = _grammarService.GetMetadata(_grammar);
+        foreach (var entry in metadata)
+        {
+            await writer.WriteLineAsync($"{entry.Key}: {entry.Value}");
+        }
+
         return _berrySethiService.ConstructExample();
     }
 }

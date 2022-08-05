@@ -27,12 +27,18 @@ public class GrammarService : IGrammarService
 
         var metadata = new Dictionary<Symbol, SymbolMetadata>();
 
+        foreach (var symbol in grammar.NonTerminals.Values.Cast<Symbol>().Concat(grammar.Terminals.Values))
+        {
+            ComputeIsEmpty(symbol, metadata, grammar);
+        }
+
         if (_cache.Count is >= CacheMaxSize and > 0)
             _cache.Remove(_cache.MinBy(e => e.Value.LastUpdate).Key);
         return (_cache[grammar] = (DateTime.Now, new ReadOnlyDictionary<Symbol, SymbolMetadata>(metadata))).MetaData;
     }
 
-    private bool ComputeIsEmpty(Symbol symbol, Dictionary<Symbol, SymbolMetadata> metadata)
+    private static bool ComputeIsEmpty(Symbol symbol, Dictionary<Symbol, SymbolMetadata> metadata, Grammar grammar,
+        ISet<NonTerminal>? usedNonTerminals = default)
     {
         var isEmptyExisting = GetIsEmpty(symbol, metadata);
         if (isEmptyExisting is not null) return (bool)isEmptyExisting;
@@ -41,14 +47,28 @@ public class GrammarService : IGrammarService
         {
             Epsilon => SetIsEmpty(symbol, metadata, true),
             Terminal => SetIsEmpty(symbol, metadata, false),
-            // TODO: Get productions of non terminal, and if any of the RHSs can be empty, the non terminal can too.
-            //       A RHS can be empty, if all symbols within can be empty.
-            NonTerminal nonTerminal => throw new NotImplementedException(),
+            NonTerminal nonTerminal => SetIsEmpty(symbol, metadata,
+                ComputeNonTerminalIsEmpty(nonTerminal, metadata, grammar, usedNonTerminals)),
             _ => false
         };
     }
 
-    private bool SetIsEmpty(Symbol symbol, Dictionary<Symbol, SymbolMetadata> metadata, bool isEmpty)
+    private static bool ComputeNonTerminalIsEmpty(NonTerminal nonTerminal, Dictionary<Symbol, SymbolMetadata> metadata,
+        Grammar grammar, ISet<NonTerminal>? usedNonTerminals = default)
+    {
+        if (usedNonTerminals?.Contains(nonTerminal) ?? false) return false;
+
+        usedNonTerminals = usedNonTerminals is not null ? usedNonTerminals.ToHashSet() : new HashSet<NonTerminal>();
+        usedNonTerminals.Add(nonTerminal);
+
+        var production = grammar.Productions.GetValueOrDefault(nonTerminal.Name);
+        if (production is null) return false;
+
+        return production.RightHands.Any(rightHand =>
+            rightHand.Symbols.All(symbol => ComputeIsEmpty(symbol, metadata, grammar, usedNonTerminals)));
+    }
+
+    private static bool SetIsEmpty(Symbol symbol, Dictionary<Symbol, SymbolMetadata> metadata, bool isEmpty)
     {
         metadata[symbol] = (metadata.GetValueOrDefault(symbol) ?? new SymbolMetadata(symbol)) with
         {
@@ -58,7 +78,7 @@ public class GrammarService : IGrammarService
         return isEmpty;
     }
 
-    private bool? GetIsEmpty(Symbol symbol, IReadOnlyDictionary<Symbol, SymbolMetadata> metadata)
+    private static bool? GetIsEmpty(Symbol symbol, IReadOnlyDictionary<Symbol, SymbolMetadata> metadata)
     {
         return metadata.GetValueOrDefault(symbol)?.IsEmpty;
     }
