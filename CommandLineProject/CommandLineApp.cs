@@ -51,7 +51,7 @@ public class CommandLineApp
             {
                 break;
             }
-        } while (line != null);
+        } while (line is not null);
 
 
         await writer.FlushAsync();

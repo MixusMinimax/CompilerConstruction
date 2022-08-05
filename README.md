@@ -6,7 +6,7 @@ Then, a shell will open. type `help` for help, or `help <command>` for help on a
 
 ## Ex02
 
-This contains Everything regarding RegexTree, including nfa, dfa, and parsing regular expression strings (TODO).
+This contains everything regarding RegexTree, including nfa, dfa, and parsing regular expression strings (TODO).
 
 Currently, the code is able to generate a pushdown table for a given grammar (in the end it will use the grammar for regex expressions).
 
