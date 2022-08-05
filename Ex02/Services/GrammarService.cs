@@ -2,6 +2,7 @@ using System.Collections.Immutable;
 using System.Collections.ObjectModel;
 using Common.Extensions;
 using Ex02.Models;
+using Ex02.Util;
 
 namespace Ex02.Services;
 
@@ -41,7 +42,7 @@ public class GrammarService : IGrammarService
 
         foreach (var symbol in grammar.Terminals.Values.Cast<Symbol>().Concat(grammar.NonTerminals.Values))
         {
-            ComputeFFollow(symbol, metadata, grammar);
+            ComputeFollow(symbol, metadata, grammar);
         }
 
         if (_cache.Count is >= CacheMaxSize and > 0)
@@ -54,14 +55,14 @@ public class GrammarService : IGrammarService
     private static bool ComputeIsEmpty(Symbol symbol, Dictionary<Symbol, SymbolMetadata> metadata, Grammar grammar,
         IImmutableSet<NonTerminal>? usedNonTerminals = default)
     {
-        var isEmptyExisting = GetIsEmpty(symbol, metadata);
+        var isEmptyExisting = metadata.GetIsEmpty(symbol);
         if (isEmptyExisting is not null) return (bool)isEmptyExisting;
 
         return symbol switch
         {
-            Epsilon => SetIsEmpty(symbol, metadata, true),
-            Terminal => SetIsEmpty(symbol, metadata, false),
-            NonTerminal nonTerminal => SetIsEmpty(symbol, metadata,
+            Epsilon => metadata.SetIsEmpty(symbol, true),
+            Terminal => metadata.SetIsEmpty(symbol, false),
+            NonTerminal nonTerminal => metadata.SetIsEmpty(symbol,
                 ComputeNonTerminalIsEmpty(nonTerminal, metadata, grammar, usedNonTerminals)),
             _ => false
         };
@@ -87,14 +88,14 @@ public class GrammarService : IGrammarService
     private static IImmutableSet<Terminal> ComputeFEps(Symbol symbol, Dictionary<Symbol, SymbolMetadata> metadata,
         Grammar grammar, IImmutableSet<NonTerminal>? usedNonTerminals = default)
     {
-        var fEpsExisting = GetFEps(symbol, metadata);
+        var fEpsExisting = metadata.GetFEps(symbol);
         if (fEpsExisting is not null) return fEpsExisting;
 
         return symbol switch
         {
-            Epsilon => SetFEps(symbol, metadata, ImmutableHashSet<Terminal>.Empty),
-            Terminal terminal => SetFEps(symbol, metadata, Enumerable.Repeat(terminal, 1).ToImmutableHashSet()),
-            NonTerminal nonTerminal => SetFEps(symbol, metadata,
+            Epsilon => metadata.SetFEps(symbol, ImmutableHashSet<Terminal>.Empty),
+            Terminal terminal => metadata.SetFEps(symbol, Enumerable.Repeat(terminal, 1).ToImmutableHashSet()),
+            NonTerminal nonTerminal => metadata.SetFEps(symbol,
                 ComputeNonTerminalFEps(nonTerminal, metadata, grammar, usedNonTerminals)),
             _ => ImmutableHashSet<Terminal>.Empty
         };
@@ -116,20 +117,22 @@ public class GrammarService : IGrammarService
 
         return production.RightHands
             .SelectMany(
-                rightHand => rightHand.Symbols.TakeWhileIncluding(symbol => (bool)GetIsEmpty(symbol, metadata)!))
+                rightHand => rightHand.Symbols.TakeWhileIncluding(symbol => (bool)metadata.GetIsEmpty(symbol)!))
             .Select(symbol => ComputeFEps(symbol, metadata, grammar, usedNonTerminals))
             .Aggregate(ImmutableHashSet<Terminal>.Empty, (set, fEps) => set.Union(fEps));
     }
 
+    // Follow
+
     private record struct ProductionOccurrence(NonTerminal From, RightHandSide RightHandSide, int Index);
 
-    private static IImmutableSet<Terminal> ComputeFFollow(Symbol symbol, Dictionary<Symbol, SymbolMetadata> metadata,
+    private static IImmutableSet<Terminal> ComputeFollow(Symbol symbol, Dictionary<Symbol, SymbolMetadata> metadata,
         Grammar grammar, IImmutableSet<Symbol>? usedSymbols = default,
         Dictionary<Symbol, List<ProductionOccurrence>>? relevantProductionsCache =
             default)
     {
-        var fFollowExisting = GetFFollow(symbol, metadata);
-        if (fFollowExisting is not null) return fFollowExisting;
+        var followExisting = metadata.GetFollow(symbol);
+        if (followExisting is not null) return followExisting;
         if (usedSymbols?.Contains(symbol) ?? false) return ImmutableHashSet<Terminal>.Empty;
 
         usedSymbols ??= ImmutableHashSet<Symbol>.Empty;
@@ -153,74 +156,17 @@ public class GrammarService : IGrammarService
 
         var fromFollowing = relevantProductions
             .SelectMany(production => production.RightHandSide.Symbols.Skip(production.Index + 1)
-                .TakeWhileIncluding(sym => (bool)GetIsEmpty(sym, metadata)!)
-                .Select(sym => GetFEps(sym, metadata)!))
-            .Aggregate(ImmutableHashSet<Terminal>.Empty, (set, fFollow) => set.Union(fFollow));
-
-        // get all productions where everything right of the symbol can be empty,
-        // and combine the FFollow of the left hand sides.
-        // TODO
+                .TakeWhileIncluding(sym => (bool)metadata.GetIsEmpty(sym)!)
+                .Select(sym => metadata.GetFEps(sym)!))
+            .Aggregate(ImmutableHashSet<Terminal>.Empty, (set, follow) => set.Union(follow));
 
         var fromParents = relevantProductions
             .Where(production => production.RightHandSide.Symbols
                 .Skip(production.Index + 1)
-                .All(sym => (bool)GetIsEmpty(sym, metadata)!))
-            .Select(production => ComputeFFollow(production.From, metadata, grammar, usedSymbols))
-            .Aggregate(ImmutableHashSet<Terminal>.Empty, (set, fFollow) => set.Union(fFollow));
+                .All(sym => (bool)metadata.GetIsEmpty(sym)!))
+            .Select(production => ComputeFollow(production.From, metadata, grammar, usedSymbols))
+            .Aggregate(ImmutableHashSet<Terminal>.Empty, (set, follow) => set.Union(follow));
 
-        return SetFFollow(symbol, metadata, fromFollowing.Union(fromParents));
-    }
-
-    // Metadata modifications
-
-    private static bool SetIsEmpty(Symbol symbol, Dictionary<Symbol, SymbolMetadata> metadata, bool isEmpty)
-    {
-        metadata[symbol] = (metadata.GetValueOrDefault(symbol) ?? new SymbolMetadata(symbol)) with
-        {
-            IsEmpty = isEmpty
-        };
-
-        return isEmpty;
-    }
-
-    private static bool? GetIsEmpty(Symbol symbol, IReadOnlyDictionary<Symbol, SymbolMetadata> metadata)
-    {
-        return metadata.GetValueOrDefault(symbol)?.IsEmpty;
-    }
-
-    private static IImmutableSet<Terminal> SetFEps(Symbol symbol, Dictionary<Symbol, SymbolMetadata> metadata,
-        IImmutableSet<Terminal> fEps)
-    {
-        var result = metadata.GetValueOrDefault(symbol) ?? new SymbolMetadata(symbol);
-
-        metadata[symbol] = result with
-        {
-            FEps = fEps,
-            FFirst = result.IsEmpty ?? false ? fEps.Add(Epsilon.Instance) : fEps
-        };
-
-        return fEps;
-    }
-
-    private static IImmutableSet<Terminal>? GetFEps(Symbol symbol, IReadOnlyDictionary<Symbol, SymbolMetadata> metadata)
-    {
-        return metadata.GetValueOrDefault(symbol)?.FEps;
-    }
-
-    private static IImmutableSet<Terminal> SetFFollow(Symbol symbol, Dictionary<Symbol, SymbolMetadata> metadata,
-        IImmutableSet<Terminal> fFollow)
-    {
-        metadata[symbol] = (metadata.GetValueOrDefault(symbol) ?? new SymbolMetadata(symbol)) with
-        {
-            FFollow = fFollow
-        };
-
-        return fFollow;
-    }
-
-    private static IImmutableSet<Terminal>? GetFFollow(Symbol symbol,
-        IReadOnlyDictionary<Symbol, SymbolMetadata> metadata)
-    {
-        return metadata.GetValueOrDefault(symbol)?.FFollow;
+        return metadata.SetFollow(symbol, fromFollowing.Union(fromParents));
     }
 }

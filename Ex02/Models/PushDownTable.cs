@@ -20,10 +20,12 @@ public static class PushDownRuleTypeExtensions
     };
 }
 
-public record PushDownRule(PushDownRuleType RuleType, State[] Head, Terminal Terminal, State[] Result)
+public record PushDownRule(PushDownRuleType RuleType, State[] Head, Terminal Terminal, State[] Result,
+    int? ChoiceIndex = default)
 {
     public override string ToString() =>
-        $"{RuleType.ToSimpleString()} | {string.Join<State>(' ', Head),64} | {Terminal.Center(8)} | {string.Join<State>(' ', Result)}";
+        $"{RuleType.ToSimpleString()} | {string.Join<State>(' ', Head),64} | {Terminal.Center(8)} | {string.Join<State>(' ', Result)}" +
+        (ChoiceIndex is not null ? $" | {ChoiceIndex}" : "");
 }
 
 public record PushDownTable(PushDownRule[] Rules)
