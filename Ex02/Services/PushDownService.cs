@@ -10,7 +10,7 @@ public interface IPushDownService
     public PushDownAutomaton CreatePushDownAutomaton(Grammar grammar);
 
     public bool RunPushDownAutomaton(PushDownAutomaton pushDownAutomaton, IEnumerable<Token> tokensEnumerable,
-        out IList<DerivationItem> derivation);
+        out DerivationItem derivation);
 }
 
 public class PushDownService : IPushDownService
@@ -34,9 +34,13 @@ public class PushDownService : IPushDownService
     }
 
     public bool RunPushDownAutomaton(PushDownAutomaton pushDownAutomaton, IEnumerable<Token> tokensEnumerable,
-        out IList<DerivationItem> derivation)
+        out DerivationItem derivation)
     {
-        derivation = new List<DerivationItem>();
+        derivation = new ExpansionDerivationItem(pushDownAutomaton.PushDownTable.StartState.NonTerminal,
+            pushDownAutomaton.PushDownTable.StartState.RightHandSide, ImmutableList<DerivationItem>.Empty);
+
+        var derivationStack = new Stack<ExpansionDerivationItem>();
+        derivationStack.Push((ExpansionDerivationItem)derivation);
 
         var stack = new Stack<State>();
         stack.Push(pushDownAutomaton.PushDownTable.StartState);
@@ -86,18 +90,33 @@ public class PushDownService : IPushDownService
                 stack.Push(state);
             }
 
+            ExpansionDerivationItem? top;
             switch (rule.RuleType)
             {
                 case PushDownRuleType.Expand:
-                    derivation.Add(new ExpansionDerivationItem(rule.Result[^1].NonTerminal,
-                        rule.Result[^1].RightHandSide));
+                    derivationStack.Push(new ExpansionDerivationItem(rule.Result[^1].NonTerminal,
+                        rule.Result[^1].RightHandSide, ImmutableList<DerivationItem>.Empty));
                     break;
                 case PushDownRuleType.Shift:
-                    derivation.Add(new ShiftDericationItem(token));
+                    top = derivationStack.Pop();
+                    derivationStack.Push(top with
+                    {
+                        Children = top.Children.Add(new ShiftDerivationItem(token))
+                    });
                     token = tokens[++i];
+                    break;
+                case PushDownRuleType.Reduce:
+                    var newChild = derivationStack.Pop();
+                    top = derivationStack.Pop();
+                    derivationStack.Push(top with
+                    {
+                        Children = top.Children.Add(newChild)
+                    });
                     break;
             }
         }
+
+        derivation = derivationStack.Pop();
 
         return stack.Count == 1 && token?.Terminal == pushDownAutomaton.Grammar.Terminals["$"] &&
                stack.Peek() == pushDownAutomaton.PushDownTable.FinishState;
