@@ -30,7 +30,7 @@ public class RegexParserService : IRegexParserService
         _grammarService = grammarService;
         _pushDownService = pushDownService;
 
-        _grammar = grammarRepository.GetExerciseGrammar();
+        _grammar = grammarRepository.GetRegexGrammar();
     }
 
     public async Task<RegexTree> ParseRegex(string regexString, StreamWriter writer)
@@ -40,8 +40,44 @@ public class RegexParserService : IRegexParserService
         await writer.WriteLineAsync(pushDownAutomaton.PushDownTable.ToString());
         await writer.WriteLineAsync(pushDownAutomaton.LookaheadTable.ToString());
 
+        var regexTokens = new List<Token>();
+        while (regexString.Length > 0)
+        {
+            if (regexString.StartsWith("()"))
+            {
+                regexTokens.Add(new Token(_grammar.Terminals["letter"], "()"));
+                regexString = regexString[2..];
+            }
+            else if (regexString.StartsWith('('))
+            {
+                regexTokens.Add(new Token(_grammar.Terminals["("], "("));
+                regexString = regexString[1..];
+            }
+            else if (regexString.StartsWith(')'))
+            {
+                regexTokens.Add(new Token(_grammar.Terminals[")"], ")"));
+                regexString = regexString[1..];
+            }
+            else if (regexString.StartsWith('*'))
+            {
+                regexTokens.Add(new Token(_grammar.Terminals["*"], "*"));
+                regexString = regexString[1..];
+            }
+            else if (regexString.StartsWith('|'))
+            {
+                regexTokens.Add(new Token(_grammar.Terminals["|"], "|"));
+                regexString = regexString[1..];
+            }
+            else
+            {
+                regexTokens.Add(new Token(_grammar.Terminals["letter"], regexString[0].ToString()));
+                regexString = regexString[1..];
+            }
+        }
+
         var accepted = _pushDownService.RunPushDownAutomaton(pushDownAutomaton,
-            $"{regexString}$".Select(c => new Token(_grammar.Terminals[c.ToString()], c.ToString())));
+            regexTokens.Append(new Token(_grammar.Terminals["$"], "$")),
+            out var derivation);
 
         await writer.WriteLineAsync($"{regexString} was {(accepted ? "accepted" : "rejected")}");
 

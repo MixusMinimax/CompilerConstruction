@@ -9,7 +9,8 @@ public interface IPushDownService
 {
     public PushDownAutomaton CreatePushDownAutomaton(Grammar grammar);
 
-    public bool RunPushDownAutomaton(PushDownAutomaton pushDownAutomaton, IEnumerable<Token> tokens);
+    public bool RunPushDownAutomaton(PushDownAutomaton pushDownAutomaton, IEnumerable<Token> tokensEnumerable,
+        out IList<DerivationItem> derivation);
 }
 
 public class PushDownService : IPushDownService
@@ -32,12 +33,15 @@ public class PushDownService : IPushDownService
         return _cache.Set(grammar, new PushDownAutomaton(grammar, metadata, pushDownTable, lookaheadTable));
     }
 
-    public bool RunPushDownAutomaton(PushDownAutomaton pushDownAutomaton, IEnumerable<Token> _tokens)
+    public bool RunPushDownAutomaton(PushDownAutomaton pushDownAutomaton, IEnumerable<Token> tokensEnumerable,
+        out IList<DerivationItem> derivation)
     {
+        derivation = new List<DerivationItem>();
+
         var stack = new Stack<State>();
         stack.Push(pushDownAutomaton.PushDownTable.StartState);
 
-        var tokens = _tokens.ToList();
+        var tokens = tokensEnumerable.ToList();
 
         Token? token = null;
         for (var i = 0; i < tokens.Count;)
@@ -65,7 +69,10 @@ public class PushDownService : IPushDownService
             else
             {
                 var nonTerminal = candidateRules.First().ChoiceNonTerminal!;
-                var lookaheadIndex = pushDownAutomaton.LookaheadTable.Rules[(nonTerminal, token.Terminal)];
+                var lookaheadIndexExists =
+                    pushDownAutomaton.LookaheadTable.Rules.TryGetValue((nonTerminal, token.Terminal),
+                        out var lookaheadIndex);
+                if (!lookaheadIndexExists) break;
                 rule = candidateRules.First(r => r.ChoiceIndex == lookaheadIndex);
             }
 
@@ -79,8 +86,17 @@ public class PushDownService : IPushDownService
                 stack.Push(state);
             }
 
-            if (rule.RuleType is not PushDownRuleType.Shift) continue;
-            token = tokens[++i];
+            switch (rule.RuleType)
+            {
+                case PushDownRuleType.Expand:
+                    derivation.Add(new ExpansionDerivationItem(rule.Result[^1].NonTerminal,
+                        rule.Result[^1].RightHandSide));
+                    break;
+                case PushDownRuleType.Shift:
+                    derivation.Add(new ShiftDericationItem(token));
+                    token = tokens[++i];
+                    break;
+            }
         }
 
         return stack.Count == 1 && token?.Terminal == pushDownAutomaton.Grammar.Terminals["$"] &&

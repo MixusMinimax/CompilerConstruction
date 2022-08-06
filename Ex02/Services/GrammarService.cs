@@ -124,8 +124,7 @@ public class GrammarService : IGrammarService
         Dictionary<Symbol, List<ProductionOccurrence>>? relevantProductionsCache =
             default)
     {
-        var followExisting = metadata.GetFollow(symbol);
-        if (followExisting is not null) return followExisting;
+        var followExisting = metadata.GetFollow(symbol) ?? ImmutableHashSet<Terminal>.Empty;
         if (usedSymbols?.Contains(symbol) ?? false) return ImmutableHashSet<Terminal>.Empty;
 
         usedSymbols ??= ImmutableHashSet<Symbol>.Empty;
@@ -160,6 +159,6 @@ public class GrammarService : IGrammarService
             .Select(production => ComputeFollow(production.From, metadata, grammar, usedSymbols))
             .Aggregate(ImmutableHashSet<Terminal>.Empty, (set, follow) => set.Union(follow));
 
-        return metadata.SetFollow(symbol, fromFollowing.Union(fromParents));
+        return metadata.SetFollow(symbol, followExisting.Union(fromFollowing.Union(fromParents)));
     }
 }
