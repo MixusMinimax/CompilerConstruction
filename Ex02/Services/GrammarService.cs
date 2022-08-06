@@ -1,5 +1,6 @@
 using System.Collections.Immutable;
 using System.Collections.ObjectModel;
+using Common;
 using Common.Extensions;
 using Ex02.Models;
 using Ex02.Util;
@@ -15,18 +16,12 @@ public class GrammarService : IGrammarService
 {
     private const int CacheMaxSize = 256;
 
-    private readonly Dictionary<Grammar, (
-        DateTime LastUpdate,
-        IReadOnlyDictionary<Symbol, SymbolMetadata> MetaData
-        )> _cache = new();
+    private readonly ICache<Grammar, IReadOnlyDictionary<Symbol, SymbolMetadata>> _cache =
+        new Cache<Grammar, IReadOnlyDictionary<Symbol, SymbolMetadata>>();
 
     public IReadOnlyDictionary<Symbol, SymbolMetadata> GetMetadata(Grammar grammar)
     {
-        if (_cache.TryGetValue(grammar, out var result))
-        {
-            _cache[grammar] = (DateTime.Now, result.MetaData);
-            return result.MetaData;
-        }
+        if (_cache.TryGetValue(grammar, out var result)) return result;
 
         var metadata = new Dictionary<Symbol, SymbolMetadata>();
 
@@ -45,9 +40,7 @@ public class GrammarService : IGrammarService
             ComputeFollow(symbol, metadata, grammar);
         }
 
-        if (_cache.Count is >= CacheMaxSize and > 0)
-            _cache.Remove(_cache.MinBy(e => e.Value.LastUpdate).Key);
-        return (_cache[grammar] = (DateTime.Now, new ReadOnlyDictionary<Symbol, SymbolMetadata>(metadata))).MetaData;
+        return _cache.Set(grammar, new ReadOnlyDictionary<Symbol, SymbolMetadata>(metadata));
     }
 
     // IsEmpty
