@@ -37,7 +37,7 @@ public class PushDownService : IPushDownService
         out DerivationItem derivation)
     {
         derivation = new ExpansionDerivationItem(pushDownAutomaton.PushDownTable.StartState.NonTerminal,
-            pushDownAutomaton.PushDownTable.StartState.RightHandSide, ImmutableList<DerivationItem>.Empty);
+            0, ImmutableList<DerivationItem>.Empty);
 
         var derivationStack = new Stack<ExpansionDerivationItem>();
         derivationStack.Push((ExpansionDerivationItem)derivation);
@@ -95,7 +95,7 @@ public class PushDownService : IPushDownService
             {
                 case PushDownRuleType.Expand:
                     derivationStack.Push(new ExpansionDerivationItem(rule.Result[^1].NonTerminal,
-                        rule.Result[^1].RightHandSide, ImmutableList<DerivationItem>.Empty));
+                        rule.ChoiceIndex ?? 0, ImmutableList<DerivationItem>.Empty));
                     break;
                 case PushDownRuleType.Shift:
                     top = derivationStack.Pop();

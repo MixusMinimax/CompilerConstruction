@@ -57,11 +57,19 @@ public class RegexParserCommand : ICommand<
 
     public override async Task<int> ExecuteAsync(RegexParserSaveOptions options, StreamWriter outputWriter)
     {
-        var regexTree = await _regexParser.ParseRegex(options.RegexString, outputWriter);
-        await _regexRepository.SaveAsync(options.Name, regexTree);
-        await outputWriter.WriteLineAsync($"Regex [{options.Name}] saved: " +
-                                          $"/{regexTree.RegexString}/".Pastel(Color.DarkCyan));
-        return 0;
+        try
+        {
+            var regexTree = await _regexParser.ParseRegex(options.RegexString, outputWriter);
+            await _regexRepository.SaveAsync(options.Name, regexTree);
+            await outputWriter.WriteLineAsync($"Regex [{options.Name}] saved: " +
+                                              $"/{regexTree.RegexString}/".Pastel(Color.DarkCyan));
+            return 0;
+        }
+        catch (Exception e)
+        {
+            await outputWriter.WriteLineAsync("Failed with exception: " + e.Message);
+            return 500;
+        }
     }
 
     public override async Task<int> ExecuteAsync(RegexParserGetOptions options, StreamWriter outputWriter)

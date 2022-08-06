@@ -2,6 +2,7 @@
 using System.Drawing;
 using CommandLine;
 using CommandLineProject;
+using Ex02.Repositories;
 using Ex02.Services;
 using Pastel;
 
@@ -12,6 +13,9 @@ public class BerrySethiDfaOptions
     [Option('o', "output", Required = false, HelpText = "Output path for graphviz file.")]
     public string? Path { get; set; }
 
+    [Option('r', "regex", Required = false, Default = "example", HelpText = "Name of the regex to use.")]
+    public string RegexName { get; set; } = null!;
+
     [Value(0, Required = true, HelpText = "Word to be tested.")]
     public string? Word { get; set; }
 }
@@ -19,17 +23,25 @@ public class BerrySethiDfaOptions
 public class BerrySethiDfaCommand : ICommand<BerrySethiDfaOptions>
 {
     private readonly IBerrySethiService _berrySethiService;
+    private readonly IRegexTreeRepository _regexTreeRepository;
 
     private IDictionary<BitArray, IDictionary<char, BitArray>>? Transitions { get; set; }
 
-    public BerrySethiDfaCommand(IBerrySethiService berrySethiService)
+    public BerrySethiDfaCommand(IBerrySethiService berrySethiService, IRegexTreeRepository regexTreeRepository)
     {
         _berrySethiService = berrySethiService;
+        _regexTreeRepository = regexTreeRepository;
     }
 
     public override async Task<int> ExecuteAsync(BerrySethiDfaOptions options, StreamWriter writer)
     {
-        var regexTree = _berrySethiService.ConstructExample();
+        var regexTree = await _regexTreeRepository.GetAsync(options.RegexName);
+        if (regexTree is null)
+        {
+            await writer.WriteLineAsync($"Regex [{options.RegexName}] not found.");
+            return 404;
+        }
+
         await writer.WriteLineAsync("RegexTree: " + $"/{regexTree.RegexString}/".Pastel(Color.DarkCyan));
 
         if (options.Path is not null)
